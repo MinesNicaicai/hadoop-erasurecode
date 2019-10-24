@@ -26,7 +26,7 @@ import org.apache.hadoop.io.erasurecode.coder.LRCErasureDecoder;
 import org.apache.hadoop.io.erasurecode.coder.LRCErasureEncoder;
 
 /**
- * An LRC erasure codec.
+ * A LRC erasure codec.
  */
 @InterfaceAudience.Private
 public class LRCErasureCodec extends ErasureCodec {

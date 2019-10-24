@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.io.erasurecode;
 
+import java.lang.reflect.Constructor;
+import java.lang.reflect.InvocationTargetException;
+
 import com.google.common.base.Preconditions;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.erasurecode.codec.ErasureCodec;
 import org.apache.hadoop.io.erasurecode.codec.HHXORErasureCodec;
+import org.apache.hadoop.io.erasurecode.codec.LRCErasureCodec;
 import org.apache.hadoop.io.erasurecode.codec.RSErasureCodec;
 import org.apache.hadoop.io.erasurecode.codec.XORErasureCodec;
 import org.apache.hadoop.io.erasurecode.coder.ErasureDecoder;
@@ -31,9 +36,6 @@ import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureDecoder;
 import org.apache.hadoop.io.erasurecode.rawcoder.RawErasureEncoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
 
 /**
  * A codec & coder utility to help create coders conveniently.
@@ -62,6 +64,11 @@ public final class CodecUtil {
       IO_ERASURECODE_CODEC + "rs";
   public static final String IO_ERASURECODE_CODEC_RS =
       RSErasureCodec.class.getCanonicalName();
+  /** Erasure coder Locally-Recoverable-Code codec. */
+  public static final String IO_ERASURECODE_CODEC_LRC_KEY =
+      IO_ERASURECODE_CODEC + "lrc";
+  public static final String IO_ERASURECODE_CODEC_LRC =
+      LRCErasureCodec.class.getCanonicalName();
   /** Erasure coder hitch hiker XOR codec. */
   public static final String IO_ERASURECODE_CODEC_HHXOR_KEY =
       IO_ERASURECODE_CODEC + "hhxor";
@@ -240,6 +247,10 @@ public final class CodecUtil {
       return conf.get(
           CodecUtil.IO_ERASURECODE_CODEC_RS_KEY,
           CodecUtil.IO_ERASURECODE_CODEC_RS);
+    case ErasureCodeConstants.LRC_CODEC_NAME:
+      return conf.get(
+          CodecUtil.IO_ERASURECODE_CODEC_LRC_KEY,
+          CodecUtil.IO_ERASURECODE_CODEC_LRC);
     case ErasureCodeConstants.RS_LEGACY_CODEC_NAME:
       //TODO:rs-legacy should be handled differently.
       return conf.get(

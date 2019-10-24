@@ -25,18 +25,18 @@ import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
  * A raw coder factory for the new raw Reed-Solomon coder in Java.
  */
 @InterfaceAudience.Private
-public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
+public class LRCRawErasureCoderFactory implements RawErasureCoderFactory {
 
-  public static final String CODER_NAME = "rs_java";
+  public static final String CODER_NAME = "lrc_java";
 
   @Override
   public RawErasureEncoder createEncoder(ErasureCoderOptions coderOptions) {
-    return new RSRawEncoder(coderOptions);
+    return new LRCRawEncoder(coderOptions);
   }
 
   @Override
   public RawErasureDecoder createDecoder(ErasureCoderOptions coderOptions) {
-    return new RSRawDecoder(coderOptions);
+    return new LRCRawDecoder(coderOptions);
   }
 
   @Override
@@ -46,6 +46,6 @@ public class RSRawErasureCoderFactory implements RawErasureCoderFactory {
 
   @Override
   public String getCodecName() {
-    return ErasureCodeConstants.RS_CODEC_NAME;
+    return ErasureCodeConstants.LRC_CODEC_NAME;
   }
 }

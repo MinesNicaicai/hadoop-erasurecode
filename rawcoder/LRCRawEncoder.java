@@ -21,16 +21,18 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.io.erasurecode.ErasureCoderOptions;
 import org.apache.hadoop.io.erasurecode.rawcoder.util.DumpUtil;
-import org.apache.hadoop.io.erasurecode.rawcoder.util.RSUtil;
+import org.apache.hadoop.io.erasurecode.rawcoder.util.LRCUtil;
 
 /**
- * A raw erasure encoder in RS code scheme in pure Java in case native one
- * isn't available in some environment. Please always use native implementations
- * when possible. This new Java coder is about 5X faster than the one originated
- * from HDFS-RAID, and also compatible with the native/ISA-L coder.
+ * Here we implement the LRC erasure code based on tranditional 
+ * RS code. As for the encodeMatrix, we simply transform one 
+ * line of Cauchy matrix to be {1, 1, ..., 1} and devide it into
+ * two half parts by 
+ *    line1 = {1, 1, ..., 1, 0, 0, ..., 0}
+ *    line2 = {0, 0, ..., 0, 1, 1, ..., 1}
  */
 @InterfaceAudience.Private
-public class RSRawEncoder extends RawErasureEncoder {
+public class LRCRawEncoder extends RawErasureEncoder {
   // relevant to schema and won't change during encode calls.
   private byte[] encodeMatrix;
   /**
@@ -39,21 +41,21 @@ public class RSRawEncoder extends RawErasureEncoder {
    */
   private byte[] gfTables;
 
-  public RSRawEncoder(ErasureCoderOptions coderOptions) {
+  public LRCRawEncoder(ErasureCoderOptions coderOptions) {
     super(coderOptions);
 
-    if (getNumAllUnits() >= RSUtil.GF.getFieldSize()) {
+    if (getNumAllUnits() >= LRCUtil.GF.getFieldSize()) {
       throw new HadoopIllegalArgumentException(
           "Invalid numDataUnits and numParityUnits");
     }
 
     encodeMatrix = new byte[getNumAllUnits() * getNumDataUnits()];
-    RSUtil.genCauchyMatrix(encodeMatrix, getNumAllUnits(), getNumDataUnits());
+    LRCUtil.genEncodeMatrix(encodeMatrix, getNumAllUnits(), getNumDataUnits());
     if (allowVerboseDump()) {
       DumpUtil.dumpMatrix(encodeMatrix, getNumDataUnits(), getNumAllUnits());
     }
     gfTables = new byte[getNumAllUnits() * getNumDataUnits() * 32];
-    RSUtil.initTables(getNumDataUnits(), getNumParityUnits(), encodeMatrix,
+    LRCUtil.initTables(getNumDataUnits(), getNumParityUnits(), encodeMatrix,
         getNumDataUnits() * getNumDataUnits(), gfTables);
     if (allowVerboseDump()) {
       System.out.println(DumpUtil.bytesToHex(gfTables, -1));
@@ -64,7 +66,7 @@ public class RSRawEncoder extends RawErasureEncoder {
   protected void doEncode(ByteBufferEncodingState encodingState) {
     CoderUtil.resetOutputBuffers(encodingState.outputs,
         encodingState.encodeLength);
-    RSUtil.encodeData(gfTables, encodingState.inputs, encodingState.outputs);
+    LRCUtil.encodeData(gfTables, encodingState.inputs, encodingState.outputs);
   }
 
   @Override
@@ -72,7 +74,7 @@ public class RSRawEncoder extends RawErasureEncoder {
     CoderUtil.resetOutputBuffers(encodingState.outputs,
         encodingState.outputOffsets,
         encodingState.encodeLength);
-    RSUtil.encodeData(gfTables, encodingState.encodeLength,
+    LRCUtil.encodeData(gfTables, encodingState.encodeLength,
         encodingState.inputs,
         encodingState.inputOffsets, encodingState.outputs,
         encodingState.outputOffsets);
