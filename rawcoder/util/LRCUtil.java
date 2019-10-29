@@ -64,7 +64,16 @@ public final class LRCUtil {
     // Identity matrix in high position
     for (int i = 0; i < k; i++) {
       a[k * i + i] = 1;
+      a[k * (k + 2) + i] = (byte) (i + 1);
     }
+
+    // For the rest choose 1/(i + j) | i != j
+    // int pos = k * k;
+    // for (int i = k; i < m; i++) {
+    //   for (int j = 0; j < k; j++) {
+    //     a[pos++] = GF256.gfInv((byte) (i ^ j));
+    //   }
+    // }
 
     for (int i = 0; i < k/2; i++){
       a[k * k + i] = 1;
@@ -74,13 +83,15 @@ public final class LRCUtil {
       a[k * (k + 1) + i] = 1;
     }
 
-    // For the rest choose 1/(i + j) | i != j
-    int pos = k * k;
-    for (int i = (k + 2); i < m; i++) {
-      for (int j = 0; j < k; j++) {
-        a[pos++] = GF256.gfInv((byte) (i ^ j));
+    
+
+    for (int i = k + 3; i < m; i++){
+      for (int j = 0; j < k; j++){
+        a[k * i + j] = GF256.gfMul((byte) (j + 1), a[k * (i - 1) + j]);
       }
     }
+
+    
   }
 
   /**

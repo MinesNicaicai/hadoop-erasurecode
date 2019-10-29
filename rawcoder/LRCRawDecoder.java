@@ -77,6 +77,7 @@ public class LRCRawDecoder extends RawErasureDecoder {
 
     encodeMatrix = new byte[numAllUnits * getNumDataUnits()];
     LRCUtil.genEncodeMatrix(encodeMatrix, numAllUnits, getNumDataUnits());
+
     if (allowVerboseDump()) {
       DumpUtil.dumpMatrix(encodeMatrix, getNumDataUnits(), numAllUnits);
     }
@@ -97,9 +98,6 @@ public class LRCRawDecoder extends RawErasureDecoder {
     prepareDecoding(decodingState.inputs, decodingState.erasedIndexes);
 
     ByteBuffer[] realInputs = new ByteBuffer[numRealInputUnits];
-    /**
-     *  To be modified. realInputs will depend on erasedIndexes in LRC. 
-     */
     for (int i = 0; i < numRealInputUnits; i++) {
       realInputs[i] = decodingState.inputs[validIndexes[i]];
     }
@@ -115,9 +113,7 @@ public class LRCRawDecoder extends RawErasureDecoder {
 
     byte[][] realInputs = new byte[numRealInputUnits][];
     int[] realInputOffsets = new int[numRealInputUnits];
-    /**
-     *  To be modified. realInputs will depend on erasedIndexes in LRC. 
-     */
+
     for (int i = 0; i < this.numRealInputUnits; i++) {
       realInputs[i] = decodingState.inputs[validIndexes[i]];
       realInputOffsets[i] = decodingState.inputOffsets[validIndexes[i]];
@@ -134,6 +130,7 @@ public class LRCRawDecoder extends RawErasureDecoder {
     int k = getNumDataUnits();
     int[] tmpRealValidIndexes = new int[getNumDataUnits()];
     // Verify if we need to recover locally or globally
+    // when erasedIndexes.length = 1 we only need half of units to recover <==> local recover
     if (erasedIndexes.length == 1){
       if (erasedIndexes[0] < getNumDataUnits() + 2){
         // We only need half of data units to recover data
@@ -178,7 +175,7 @@ public class LRCRawDecoder extends RawErasureDecoder {
     } // end if erasedIndexes.length == 1
     else if (erasedIndexes.length < getNumParityUnits()){
       this.numRealInputUnits = getNumDataUnits();
-      int erasedFlag;
+      int erasedFlag = 0;
       if (erasedIndexes[0] < k/2 || erasedIndexes[0] == k){
         // X region has at least one erased unit
         erasedFlag = 0;
@@ -187,9 +184,11 @@ public class LRCRawDecoder extends RawErasureDecoder {
         // Y region has at least one erased unit
         erasedFlag = 1;
       }
-      else erasedFlag = 2; // All erased units are in the global parity region
+      else {
+        erasedFlag = 2; // All erased units are in the global parity region
+      }
 
-      tmpRealValidIndexes = getGlobalValideIndexes(tmpValidIndexes, this.numRealInputUnits, erasedFlag);
+      tmpRealValidIndexes = getGlobalValidIndexes(tmpValidIndexes, this.numRealInputUnits, erasedFlag);
     } // end if erasedIndexes.length < getNumParityUnits()
     else {
       if (erasedIndexesInLocal(erasedIndexes)){
@@ -214,11 +213,11 @@ public class LRCRawDecoder extends RawErasureDecoder {
             Arrays.copyOf(erasedIndexes, erasedIndexes.length);
     this.validIndexes =
             Arrays.copyOf(tmpRealValidIndexes, tmpRealValidIndexes.length);
-
+    
     processErasures(erasedIndexes);
   }
 
-  private int[] getGlobalValideIndexes(int[] validIndexes, int numGlobalIndexes, int erasedFlag){
+  private int[] getGlobalValidIndexes(int[] validIndexes, int numGlobalIndexes, int erasedFlag){
     int k = getNumDataUnits();
     int[] localXIndexes = new int[k];
     int[] localYIndexes = new int[k];
@@ -235,35 +234,38 @@ public class LRCRawDecoder extends RawErasureDecoder {
         globalIndexes[curG++] = validIndexes[i];
       }
     }
-    int[] globalValideIndexes = new int[numGlobalIndexes];
+
+    int[] globalValidIndexes = new int[validIndexes.length];
     int cur = 0;
+
+    // erasedFlag = 0 <==> at least one erased unit is in localX
     if (erasedFlag == 0){
       for (int i = 0; i < curX; i++){
-        globalValideIndexes[cur++] = localXIndexes[i];
+        globalValidIndexes[cur++] = localXIndexes[i];
       }
       for (int i = 0; i < curG; i++){
-        globalValideIndexes[cur++] = globalIndexes[i];
+        globalValidIndexes[cur++] = globalIndexes[i];
       }
       for (int i = 0; i < curY; i++){
-        globalValideIndexes[cur++] = localYIndexes[i];
+        globalValidIndexes[cur++] = localYIndexes[i];
       }
     }
+    // erasedFlag = 1 <==> at least one erased unit is in localY
     else if (erasedFlag == 1){
       for (int i = 0; i < curY; i++){
-        globalValideIndexes[cur++] = localYIndexes[i];
+        globalValidIndexes[cur++] = localYIndexes[i];
       }
       for (int i = 0; i < curG; i++){
-        globalValideIndexes[cur++] = globalIndexes[i];
+        globalValidIndexes[cur++] = globalIndexes[i];
       }
-      
       for (int i = 0; i < curX; i++){
-        globalValideIndexes[cur++] = localXIndexes[i];
+        globalValidIndexes[cur++] = localXIndexes[i];
       }
     } 
     else {
       return Arrays.copyOf(validIndexes, numGlobalIndexes);
     } 
-    return Arrays.copyOf(globalValideIndexes, numGlobalIndexes);
+    return Arrays.copyOf(globalValidIndexes, numGlobalIndexes);
   }
 
   private boolean erasedIndexesInLocal(int[] erasedIndexes){
@@ -352,7 +354,7 @@ public class LRCRawDecoder extends RawErasureDecoder {
     // Construct matrix tmpMatrix by removing error rows
     for (i = 0; i < this.numRealInputUnits; i++) {
       /** To be modified, here it picks the first getNumDataUnits() 
-       * valide units for decoding. However, in LRC the valide units
+       * valid units for decoding. However, in LRC the valid units
        * for decoding depend on the erasedIndexes. 
        */
       r = validIndexes[i]; 
